@@ -29,6 +29,19 @@ class FocusTrackApp extends StatelessWidget {
   }
 }
 
+/// Niveles de prioridad de la sesion con su color representativo
+enum Prioridad {
+  baja('Baja', Icons.keyboard_arrow_down, Colors.blueGrey),
+  media('Media', Icons.drag_handle, Colors.orange),
+  alta('Alta', Icons.keyboard_double_arrow_up, Color(0xFF8B1A1A)); // Borgoña
+
+  const Prioridad(this.etiqueta, this.icono, this.color);
+
+  final String etiqueta;
+  final IconData icono;
+  final Color color;
+}
+
 /// Pantalla con estado reactivo para registrar metas y productividad
 class PantallaPrincipalMetas extends StatefulWidget {
   const PantallaPrincipalMetas({super.key});
@@ -42,6 +55,8 @@ class _PantallaPrincipalMetasState extends State<PantallaPrincipalMetas> {
   int _metasCompletadas = 0;
   final int _metaObjetivo = 5;
   String _nivelProductividad = 'Inicial';
+  Prioridad _prioridad = Prioridad.media;
+  static const int _limiteDiario = 10;
 
   void _actualizarNivel() {
     if (_metasCompletadas == 0) {
@@ -57,6 +72,19 @@ class _PantallaPrincipalMetasState extends State<PantallaPrincipalMetas> {
   }
 
   void _incrementarMeta() {
+    if (_metasCompletadas >= _limiteDiario) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Ha alcanzado el límite máximo diario de metas (10/10). '
+              '¡Excelente jornada!',
+            ),
+          ),
+        );
+      return;
+    }
     setState(() {
       _metasCompletadas++;
       _actualizarNivel();
@@ -204,19 +232,42 @@ class _PantallaPrincipalMetasState extends State<PantallaPrincipalMetas> {
               ),
               const SizedBox(height: 24.0),
 
+              // Selector de Prioridad de la Sesion
+              SegmentedButton<Prioridad>(
+                segments: [
+                  for (final p in Prioridad.values)
+                    ButtonSegment<Prioridad>(
+                      value: p,
+                      label: Text(p.etiqueta),
+                      icon: Icon(p.icono),
+                    ),
+                ],
+                selected: {_prioridad},
+                onSelectionChanged: (Set<Prioridad> seleccion) {
+                  setState(() => _prioridad = seleccion.first);
+                },
+                style: SegmentedButton.styleFrom(
+                  selectedBackgroundColor: _prioridad.color,
+                  selectedForegroundColor: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 24.0),
+
               // Panel de Informacion Tecnica
               Card(
                 elevation: 1.0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12.0),
                   side: BorderSide(
-                    color: colores.outlineVariant,
+                    color: _prioridad.color,
+                    width: 2.0,
                   ),
                 ),
-                child: const ListTile(
-                  leading: Icon(Icons.info_outline),
-                  title: Text('Sesión Móvil Activa'),
+                child: ListTile(
+                  leading: Icon(Icons.info_outline, color: _prioridad.color),
+                  title: const Text('Sesión Móvil Activa'),
                   subtitle: Text(
+                    'Prioridad ${_prioridad.etiqueta}. '
                     'Renderizado nativo impulsado por el motor Impeller '
                     'y gestionado con Hot Reload.',
                   ),
